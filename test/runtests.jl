@@ -1,5 +1,3 @@
-module UnitfulTests
-
 using Unitful
 using Test, LinearAlgebra, Random
 import Unitful: DimensionError, AffineError
@@ -13,7 +11,7 @@ import Unitful:
     Ra, °F, °C, K,
     rad, °,
     ms, s, minute, hr, Hz,
-    J, A, N, mol, cd, V,
+    J, A, N, mol, V,
     mW, W,
     dB, dB_rp, dB_p, dBm, dBV, dBSPL, Decibel,
     Np, Np_rp, Np_p, Neper
@@ -86,8 +84,15 @@ end
         @test @inferred(ustrip(m, 3.0m)) === 3.0
         @test @inferred(ustrip(m, 2mm)) === 1//500
         @test @inferred(ustrip(mm, 3.0m)) === 3000.0
+        @test @inferred(ustrip(NoUnits, 3.0m/1.0m)) === 3.0
+        @test @inferred(ustrip(NoUnits, 3.0m/1.0cm)) === 300.0
+        @test @inferred(ustrip(cm, missing)) === missing
+        @test @inferred(ustrip(NoUnits, missing)) === missing
+        @test_throws DimensionError ustrip(NoUnits, 3.0m/1.0s)
         @test @inferred(ustrip(Float64, m, 2mm)) === 0.002
         @test @inferred(ustrip(Int, mm, 2.0m)) === 2000
+        @test @inferred(ustrip(Float32, NoUnits, 5.0u"m"/2.0u"m")) === Float32(2.5)
+        @test @inferred(ustrip(Int, NoUnits, 3.0u"m"/1.0u"cm")) === 300
         # convert
         @test convert(typeof(1mm/m), 3) == 3000mm/m
         @test convert(typeof(1mm/m), 3*NoUnits) == 3000mm/m
@@ -266,6 +271,7 @@ end
         @test @inferred(upreferred(1g |> ContextUnits(g,mg))) == 1000mg
 
         @test @inferred(upreferred(1N)) === (1//1)*kg*m/s^2
+        @test ismissing(upreferred(missing))
     end
     @testset "> promote_unit" begin
         @test Unitful.promote_unit(FreeUnits(m)) === FreeUnits(m)
@@ -422,7 +428,7 @@ end
     @test isa(1s, Time)
     @test isa(1A, Current)
     @test isa(1K, Temperature)
-    @test isa(1cd, Luminosity)
+    @test isa(1u"cd", Luminosity)
     @test isa(2π*rad*1.0m, Length)
     @test isa(u"h", Action)
     @test isa(3u"dBm", Power)
@@ -1131,11 +1137,22 @@ end
 
 @testset "Display" begin
     @test string(typeof(1.0m/s)) ==
-        "Unitful.Quantity{Float64,𝐋*𝐓^-1,Unitful.FreeUnits{(m, s^-1),𝐋*𝐓^-1,nothing}}"
+        "Quantity{Float64,𝐋*𝐓^-1,FreeUnits{(m, s^-1),𝐋*𝐓^-1,nothing}}"
     @test string(typeof(m/s)) ==
-        "Unitful.FreeUnits{(m, s^-1),𝐋*𝐓^-1,nothing}"
+        "FreeUnits{(m, s^-1),𝐋*𝐓^-1,nothing}"
     @test string(dimension(1u"m/s")) == "𝐋 𝐓^-1"
     @test string(NoDims) == "NoDims"
+end
+
+struct Foo <: Number end
+Base.show(io::IO, x::Foo) = print(io, "1")
+Base.show(io::IO, ::MIME"text/plain", ::Foo) = print(io, "42.0")
+
+@testset "Show quantities" begin
+    @test repr(1.0 * u"m * s * kg^-1") == "1.0 m s kg^-1"
+    @test repr("text/plain", 1.0 * u"m * s * kg^-1") == "1.0 m s kg^-1"
+    @test repr(Foo() * u"m * s * kg^-1") == "1 m s kg^-1"
+    @test repr("text/plain", Foo() * u"m * s * kg^-1") == "42.0 m s kg^-1"
 end
 
 @testset "DimensionError message" begin
@@ -1498,4 +1515,16 @@ end
     @test isa(TUM.fu^2, TUM.FakeDim212345Units)
 end
 
+
+struct Num <: Real
+   x::Float64
+end
+Base.:+(a::Num, b::Num) = Num(a.x - b.x)
+Base.:-(a::Num, b::Num) = Num(a.x - b.x)
+Base.:*(a::Num, b::Num) = Num(a.x * b.x)
+Base.promote_rule(::Type{Num}, ::Type{<:Real}) = Num
+
+@testset "Custom types" begin
+    # Test that @generated functions work with Quantities + custom types (#231)
+    @test uconvert(u"°C", Num(100)u"K") == Num(373.15)u"°C"
 end
