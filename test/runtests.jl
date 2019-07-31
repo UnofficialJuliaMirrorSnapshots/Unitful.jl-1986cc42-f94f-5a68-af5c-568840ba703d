@@ -1185,6 +1185,14 @@ Base.show(io::IO, ::MIME"text/plain", ::Foo) = print(io, "42.0")
     @test repr("text/plain", 1.0 * u"m * s * kg^-1") == "1.0 m s kg^-1"
     @test repr(Foo() * u"m * s * kg^-1") == "1 m s kg^-1"
     @test repr("text/plain", Foo() * u"m * s * kg^-1") == "42.0 m s kg^-1"
+    # Angular degree printing #253
+    @test sprint(show, 1.0°)       == "1.0°"
+    @test repr("text/plain", 1.0°) == "1.0°"
+
+    # Concise printing of ranges
+    @test repr((1:10)*u"kg/m^3") == "(1:10) kg m^-3"
+    @test repr((1.0:0.1:10.0)*u"kg/m^3") == "(1.0:0.1:10.0) kg m^-3"
+    @test repr((1:10)*°) == "(1:10)°"
 end
 
 @testset "DimensionError message" begin
