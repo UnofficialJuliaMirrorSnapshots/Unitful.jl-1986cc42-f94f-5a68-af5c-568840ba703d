@@ -26,7 +26,10 @@ import Unitful:
     Current,
     Temperature, AbsoluteScaleTemperature, RelativeScaleTemperature,
     Action,
-    Power
+    Power,
+    MassFlow,
+    MolarFlow,
+    VolumeFlow
 
 import Unitful: LengthUnits, AreaUnits, MassUnits, TemperatureUnits
 
@@ -170,6 +173,11 @@ end
             @test uconvert(g, 1*FixedUnits(kg)) == 1000g         # manual conversion okay
             # Issue 79:
             @test isapprox(upreferred(Unitful.ɛ0), 8.85e-12u"F/m", atol=0.01e-12u"F/m")
+            # Issue 261:
+            @test 1u"rps" == 360°/s
+            @test 1u"rps" == 2π/s
+            @test 1u"rpm" == 360°/minute
+            @test 1u"rpm" == 2π/minute
         end
     end
 end
@@ -445,7 +453,9 @@ end
     @test isa(u"h", Action)
     @test isa(3u"dBm", Power)
     @test isa(3u"dBm*Hz*s", Power)
-
+    @test isa(1kg/s, MassFlow)
+    @test isa(1mol/s, MolarFlow)
+    @test isa(1m^3/s, VolumeFlow)
 end
 
 @testset "Mathematics" begin
@@ -499,6 +509,9 @@ end
         @test @inferred(zero(1m)) === 0m                # Additive identity
         @test @inferred(zero(typeof(1m))) === 0m
         @test @inferred(zero(typeof(1.0m))) === 0.0m
+        @test_throws ArgumentError zero(Quantity{Int})
+        @test zero(Quantity{Int, 𝐋}) == 0m
+        @test zero(Quantity{Int, 𝐋}) isa Quantity{Int}
         @test @inferred(π/2*u"rad" + 90u"°") ≈ π        # Dimless quantities
         @test @inferred(π/2*u"rad" - 90u"°") ≈ 0        # Dimless quantities
         @test_throws DimensionError 1+1m                # Dim mismatched
@@ -1163,6 +1176,8 @@ end
             @test size(rand(Q, 2)) == (2,)
             @test size(rand(Q, 2, 3)) == (2,3)
             @test eltype(@inferred(rand(Q, 2))) == Q
+            @test_throws ArgumentError zero([1u"m", 1u"s"])
+            @test zero(Quantity{Int,𝐋}[1u"m", 1u"mm"]) == [0, 0]u"m"
         end
     end
 end
@@ -1441,6 +1456,8 @@ end
             @test false * 3dB == 0*dB
             @test 1V * 20dB == 10V
             @test 20dB * 1V == 10V
+            @test 10J * 10dB == 100J
+            @test 10W/m^3 * 10dB == 100W/m^3
         end
 
         @testset ">> MixedUnits" begin
@@ -1594,4 +1611,3 @@ finally
     rm(load_path, recursive=true)
     rm(load_cache_path, recursive=true)
 end
-

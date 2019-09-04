@@ -46,6 +46,9 @@ const AbsoluteScaleTemperature = Quantity{T, 𝚯, <:ScalarUnits} where T
 @derived_dimension MagneticDipoleMoment     𝐋^2*𝐈
 @derived_dimension Molarity                 𝐍/𝐋^3
 @derived_dimension Molality                 𝐍/𝐌
+@derived_dimension MassFlow                 𝐌/𝐓
+@derived_dimension MolarFlow                𝐍/𝐓
+@derived_dimension VolumeFlow               𝐋^3/𝐓
 
 # Define base units. This is not to imply g is the base SI unit instead of kg.
 # See the documentation for further details.
@@ -101,8 +104,8 @@ end
 @unit hr     "hr"       Hour                  3600s         false
 @unit d      "d"        Day                   86400s        false
 @unit wk     "wk"       Week                  604800s       false
-@unit rps    "rps"      RevolutionsPerSecond  1/s           false
-@unit rpm    "rpm"      RevolutionsPerMinute  1/minute      false
+@unit rps    "rps"      RevolutionsPerSecond  2π*rad/s      false
+@unit rpm    "rpm"      RevolutionsPerMinute  2π*rad/minute false
 
 # Area
 # The hectare is used more frequently than any other power-of-ten of an are.
@@ -232,10 +235,12 @@ isrootpower_dim(::typeof(dimension(A)))         = true
 isrootpower_dim(::typeof(dimension(Pa)))        = true
 isrootpower_dim(::typeof(dimension(W/m^2/Hz)))  = false     # spectral flux dens.
 isrootpower_dim(::typeof(dimension(W/m^2)))     = false     # intensity
+isrootpower_dim(::typeof(dimension(W/m^2/m)))   = false
 isrootpower_dim(::typeof(𝐋^3))                  = false     # reflectivity
 isrootpower_dim(::typeof(dimension(Ω)))         = true
 isrootpower_dim(::typeof(dimension(S)))         = true
 isrootpower_dim(::typeof(dimension(Hz)))        = false
+isrootpower_dim(::typeof(dimension(J)))         = false
 
 #########
 
